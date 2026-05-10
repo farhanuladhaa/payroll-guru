@@ -1,31 +1,76 @@
+// src/App.jsx
+
 import { useEffect, useState } from 'react'
-import { supabase } from './lib/supabase'
+import { calculatePayroll } from './services/payrollService'
 
 function App() {
-  const [status, setStatus] = useState('Testing connection...')
+  const [result, setResult] = useState(null)
 
   useEffect(() => {
-    async function testConnection() {
-      try {
-        const { error } = await supabase.auth.getSession()
-
-        if (error) {
-          setStatus(`Connection failed: ${error.message}`)
-        } else {
-          setStatus('Supabase connected successfully! 🚀')
-        }
-      } catch (err) {
-        setStatus(`Unexpected error: ${err.message}`)
-      }
+    async function testPayroll() {
+      const response = await calculatePayroll(2026, 5)
+      setResult(response)
     }
 
-    testConnection()
+    testPayroll()
   }, [])
+
+  if (!result) {
+    return (
+      <div className="p-10">
+        <h1 className="text-3xl font-bold mb-4">Payroll Service Test</h1>
+        <p>Loading...</p>
+      </div>
+    )
+  }
+
+  if (!result.success) {
+    return (
+      <div className="p-10">
+        <h1 className="text-3xl font-bold mb-4">Payroll Service Test</h1>
+        <p className="text-red-600">Error: {result.message}</p>
+      </div>
+    )
+  }
 
   return (
     <div className="p-10">
-      <h1 className="text-3xl font-bold mb-4">Supabase Connection Test</h1>
-      <p>{status}</p>
+      <h1 className="text-3xl font-bold mb-4">Payroll Service Test</h1>
+
+      <p className="mb-2">
+        Payroll period: {result.month}/{result.year}
+      </p>
+
+      <p className="mb-6">
+        Total active employees: {result.totalEmployees}
+      </p>
+
+      {result.employees.map((employee) => (
+        <div
+          key={employee.id}
+          className="mb-4 p-4 border rounded-lg bg-white shadow-sm"
+        >
+          <p>
+            <strong>Nama:</strong> {employee.full_name}
+          </p>
+
+          <p>
+            <strong>NIP:</strong> {employee.nip}
+          </p>
+
+          <p>
+            <strong>Jabatan:</strong> {employee.positions?.name}
+          </p>
+
+          <p>
+            <strong>Tanggal Masuk:</strong> {employee.hire_date}
+          </p>
+
+          <p>
+            <strong>Masa Kerja:</strong> {employee.yearsOfService} tahun
+          </p>
+        </div>
+      ))}
     </div>
   )
 }
