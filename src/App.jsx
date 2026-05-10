@@ -1,114 +1,150 @@
-// src/App.jsx
-
-import { useState } from 'react'
-import { processPayroll } from './services/payrollService'
-import { generateSlipPDF } from './services/pdfService'
+import { useEffect, useState } from 'react'
 import { supabase } from './lib/supabase'
 
 function App() {
-  const [result, setResult] = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [latestPayrollDetail, setLatestPayrollDetail] = useState(null)
+  const [payrolls, setPayrolls] = useState([])
+  const [loading, setLoading] = useState(true)
 
-  async function handleProcessPayroll() {
+  useEffect(() => {
+    loadPayrolls()
+  }, [])
+
+  async function loadPayrolls() {
     setLoading(true)
-    setResult(null)
 
-    const response = await processPayroll(2026, 5)
-    setResult(response)
+    const { data, error } = await supabase
+      .from('payroll')
+      .select(`
+        *,
+        payroll_details (
+          id,
+          total_salary
+        )
+      `)
+      .order('payroll_year', { ascending: false })
+      .order('payroll_month', { ascending: false })
 
-    // Jika sukses, ambil satu payroll detail terbaru
-    if (response.success) {
-      const { data } = await supabase
-        .from('payroll_details')
-        .select('*')
-        .eq('payroll_id', response.payrollId)
-        .limit(1)
-        .single()
-
-      setLatestPayrollDetail(data)
+    if (error) {
+      console.error(error)
+    } else {
+      setPayrolls(data || [])
     }
 
     setLoading(false)
   }
 
-  function handleGeneratePDF() {
-    if (!latestPayrollDetail) return
+  function getMonthName(month) {
+    const months = [
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember',
+    ]
 
-    generateSlipPDF(latestPayrollDetail, 2026, 5)
+    return months[month - 1]
+  }
+
+  function formatCurrency(amount) {
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      minimumFractionDigits: 0,
+    }).format(Number(amount || 0))
+  }
+
+  if (loading) {
+    return (
+      <div className="p-10">
+        <h1 className="text-3xl font-bold mb-4">
+          Payroll History Dashboard
+        </h1>
+        <p>Loading payroll history...</p>
+      </div>
+    )
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-10">
-      <div className="bg-white shadow-xl rounded-2xl p-10 max-w-2xl w-full">
-        <h1 className="text-4xl font-bold text-blue-600 mb-4">
-          Process Payroll
+    <div className="min-h-screen bg-gray-100 p-10">
+      <div className="max-w-6xl mx-auto">
+        <h1 className="text-4xl font-bold text-blue-600 mb-2">
+          Payroll History Dashboard
         </h1>
 
-        <p className="text-gray-600 mb-6">
-          Klik tombol di bawah untuk memproses payroll periode Mei 2026
-          dan menyimpan snapshot ke database.
+        <p className="text-gray-600 mb-8">
+          Riwayat seluruh payroll yang telah diproses.
         </p>
 
-        <div className="flex gap-4">
-          <button
-            onClick={handleProcessPayroll}
-            disabled={loading}
-            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-6 py-3 rounded-xl font-semibold"
-          >
-            {loading ? 'Processing...' : 'Process Payroll'}
-          </button>
+        <div className="bg-white shadow rounded-2xl overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-blue-600 text-white">
+              <tr>
+                <th className="text-left px-6 py-4">Periode</th>
+                <th className="text-left px-6 py-4">Status</th>
+                <th className="text-right px-6 py-4">Jumlah Guru</th>
+                <th className="text-right px-6 py-4">Total Pengeluaran</th>
+              </tr>
+            </thead>
 
-          <button
-            onClick={handleGeneratePDF}
-            disabled={!latestPayrollDetail}
-            className="bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white px-6 py-3 rounded-xl font-semibold"
-          >
-            Generate Slip PDF
-          </button>
+            <tbody>
+              {payrolls.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan="4"
+                    className="text-center px-6 py-10 text-gray-500"
+                  >
+                    Belum ada payroll yang diproses.
+                  </td>
+                </tr>
+              ) : (
+                payrolls.map((payroll) => {
+                  const details = payroll.payroll_details || []
+
+                  const totalEmployees = details.length
+
+                  const totalExpense = details.reduce(
+                    (sum, detail) =>
+                      sum + Number(detail.total_salary || 0),
+                    0
+                  )
+
+                  return (
+                    <tr
+                      key={payroll.id}
+                      className="border-b hover:bg-gray-50"
+                    >
+                      <td className="px-6 py-4 font-medium">
+                        {getMonthName(payroll.payroll_month)}{' '}
+                        {payroll.payroll_year}
+                      </td>
+
+                      <td className="px-6 py-4">
+                        <span className="px-3 py-1 rounded-full text-sm bg-yellow-100 text-yellow-700">
+                          {payroll.status}
+                        </span>
+                      </td>
+
+                      <td className="px-6 py-4 text-right">
+                        {totalEmployees}
+                      </td>
+
+                      <td className="px-6 py-4 text-right font-semibold text-green-600">
+                        {formatCurrency(totalExpense)}
+                      </td>
+                    </tr>
+                  )
+                })
+              )}
+            </tbody>
+          </table>
         </div>
-
-        {result && (
-          <div className="mt-6 p-4 rounded-xl bg-gray-50 border">
-            {result.success ? (
-              <div>
-                <p className="text-green-600 font-bold text-lg">
-                  ✅ Payroll berhasil diproses!
-                </p>
-                <p className="mt-2">{result.message}</p>
-                <p>Total Processed: {result.totalProcessed}</p>
-                <p className="text-sm text-gray-500 mt-2">
-                  Payroll ID: {result.payrollId}
-                </p>
-                <p className="text-sm text-green-600 mt-2">
-                  Sekarang klik "Generate Slip PDF"
-                </p>
-              </div>
-            ) : (
-              <div>
-                <p className="text-red-600 font-bold text-lg">
-                  ❌ Gagal memproses payroll
-                </p>
-                <p className="mt-2">{result.message}</p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {latestPayrollDetail && (
-          <div className="mt-6 p-4 rounded-xl bg-green-50 border border-green-200">
-            <p className="font-semibold">
-              Slip siap dibuat untuk:
-            </p>
-            <p>{latestPayrollDetail.employee_name}</p>
-            <p>
-              Total Gaji:{' '}
-              {Number(
-                latestPayrollDetail.total_salary
-              ).toLocaleString('id-ID')}
-            </p>
-          </div>
-        )}
       </div>
     </div>
   )
