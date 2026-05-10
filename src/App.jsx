@@ -1,107 +1,115 @@
-import { useEffect, useState } from 'react'
-import { calculatePayroll } from './services/payrollService'
-import { formatCurrency } from './utils/formatCurrency'
+// src/App.jsx
+
+import { useState } from 'react'
+import { processPayroll } from './services/payrollService'
+import { generateSlipPDF } from './services/pdfService'
+import { supabase } from './lib/supabase'
 
 function App() {
   const [result, setResult] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [latestPayrollDetail, setLatestPayrollDetail] = useState(null)
 
-  useEffect(() => {
-    async function testPayroll() {
-      const response = await calculatePayroll(2026, 5)
-      setResult(response)
+  async function handleProcessPayroll() {
+    setLoading(true)
+    setResult(null)
+
+    const response = await processPayroll(2026, 5)
+    setResult(response)
+
+    // Jika sukses, ambil satu payroll detail terbaru
+    if (response.success) {
+      const { data } = await supabase
+        .from('payroll_details')
+        .select('*')
+        .eq('payroll_id', response.payrollId)
+        .limit(1)
+        .single()
+
+      setLatestPayrollDetail(data)
     }
 
-    testPayroll()
-  }, [])
-
-  if (!result) {
-    return (
-      <div className="p-10">
-        <h1 className="text-3xl font-bold mb-4">Payroll Calculation Test</h1>
-        <p>Loading...</p>
-      </div>
-    )
+    setLoading(false)
   }
 
-  if (!result.success) {
-    return (
-      <div className="p-10">
-        <h1 className="text-3xl font-bold mb-4">Payroll Calculation Test</h1>
-        <p className="text-red-600">Error: {result.message}</p>
-      </div>
-    )
+  function handleGeneratePDF() {
+    if (!latestPayrollDetail) return
+
+    generateSlipPDF(latestPayrollDetail, 2026, 5)
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 p-10">
-      <h1 className="text-4xl font-bold text-blue-600 mb-2">
-        Payroll Calculation Test
-      </h1>
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-10">
+      <div className="bg-white shadow-xl rounded-2xl p-10 max-w-2xl w-full">
+        <h1 className="text-4xl font-bold text-blue-600 mb-4">
+          Process Payroll
+        </h1>
 
-      <p className="text-gray-600 mb-2">
-        Payroll period: {result.month}/{result.year}
-      </p>
+        <p className="text-gray-600 mb-6">
+          Klik tombol di bawah untuk memproses payroll periode Mei 2026
+          dan menyimpan snapshot ke database.
+        </p>
 
-      <p className="text-gray-600 mb-8">
-        Total active employees: {result.totalEmployees}
-      </p>
+        <div className="flex gap-4">
+          <button
+            onClick={handleProcessPayroll}
+            disabled={loading}
+            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-6 py-3 rounded-xl font-semibold"
+          >
+            {loading ? 'Processing...' : 'Process Payroll'}
+          </button>
 
-      {result.employees.map((employee) => (
-        <div
-          key={employee.id}
-          className="bg-white shadow rounded-2xl p-6 mb-6"
-        >
-          <h2 className="text-2xl font-bold mb-4">
-            {employee.full_name}
-          </h2>
+          <button
+            onClick={handleGeneratePDF}
+            disabled={!latestPayrollDetail}
+            className="bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white px-6 py-3 rounded-xl font-semibold"
+          >
+            Generate Slip PDF
+          </button>
+        </div>
 
-          <div className="space-y-1 text-gray-700">
-            <p><strong>NIP:</strong> {employee.nip}</p>
-            <p><strong>Jabatan:</strong> {employee.positions?.name}</p>
-            <p>
-              <strong>Masa Kerja:</strong>{' '}
-              {employee.yearsOfService} tahun
+        {result && (
+          <div className="mt-6 p-4 rounded-xl bg-gray-50 border">
+            {result.success ? (
+              <div>
+                <p className="text-green-600 font-bold text-lg">
+                  ✅ Payroll berhasil diproses!
+                </p>
+                <p className="mt-2">{result.message}</p>
+                <p>Total Processed: {result.totalProcessed}</p>
+                <p className="text-sm text-gray-500 mt-2">
+                  Payroll ID: {result.payrollId}
+                </p>
+                <p className="text-sm text-green-600 mt-2">
+                  Sekarang klik "Generate Slip PDF"
+                </p>
+              </div>
+            ) : (
+              <div>
+                <p className="text-red-600 font-bold text-lg">
+                  ❌ Gagal memproses payroll
+                </p>
+                <p className="mt-2">{result.message}</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {latestPayrollDetail && (
+          <div className="mt-6 p-4 rounded-xl bg-green-50 border border-green-200">
+            <p className="font-semibold">
+              Slip siap dibuat untuk:
             </p>
+            <p>{latestPayrollDetail.employee_name}</p>
             <p>
-              <strong>Hari Hadir:</strong>{' '}
-              {employee.daysPresent}
+              Total Gaji:{' '}
+              {Number(
+                latestPayrollDetail.total_salary
+              ).toLocaleString('id-ID')}
             </p>
           </div>
-
-          {employee.error ? (
-            <p className="text-red-600 mt-4">
-              Error: {employee.error}
-            </p>
-          ) : (
-            <div className="mt-6 border-t pt-4 space-y-2">
-              <p>
-                <strong>Gaji Pokok:</strong>{' '}
-                {formatCurrency(employee.baseSalary)}
-              </p>
-
-              <p>
-                <strong>Tunjangan:</strong>{' '}
-                {formatCurrency(employee.allowance)}
-              </p>
-
-              <p>
-                <strong>Tarif Kehadiran:</strong>{' '}
-                {formatCurrency(employee.attendanceRate)}
-              </p>
-
-              <p>
-                <strong>Insentif Kehadiran:</strong>{' '}
-                {formatCurrency(employee.attendanceAmount)}
-              </p>
-
-              <p className="text-2xl font-bold text-green-600 mt-4">
-                Total Gaji:{' '}
-                {formatCurrency(employee.totalSalary)}
-              </p>
-            </div>
-          )}
-        </div>
-      ))}
+        )}
+      </div>
     </div>
   )
 }

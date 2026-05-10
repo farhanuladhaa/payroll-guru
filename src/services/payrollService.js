@@ -110,3 +110,87 @@ export async function calculatePayroll(year, month) {
     }
   }
 }
+
+export async function processPayroll(year, month) {
+  try {
+    // 1. Hitung payroll terlebih dahulu
+    const calculation = await calculatePayroll(year, month)
+
+    if (!calculation.success) {
+      throw new Error(calculation.message)
+    }
+
+    // 2. Cek apakah payroll periode ini sudah ada
+    const { data: existingPayroll } = await supabase
+      .from('payroll')
+      .select('id')
+      .eq('payroll_year', year)
+      .eq('payroll_month', month)
+      .maybeSingle()
+
+    if (existingPayroll) {
+      throw new Error(
+        `Payroll for ${month}/${year} already exists`
+      )
+    }
+
+    // 3. Buat header payroll
+    const { data: payrollHeader, error: payrollError } =
+      await supabase
+        .from('payroll')
+        .insert({
+          payroll_year: year,
+          payroll_month: month,
+          status: 'draft',
+        })
+        .select()
+        .single()
+
+    if (payrollError) throw payrollError
+
+    // 4. Siapkan detail payroll
+    const details = calculation.employees
+      .filter((employee) => !employee.error)
+      .map((employee) => ({
+        payroll_id: payrollHeader.id,
+        employee_id: employee.id,
+
+        employee_name: employee.full_name,
+        employee_nip: employee.nip,
+        position_name: employee.positions?.name || '',
+
+        years_of_service: employee.yearsOfService,
+        days_present: employee.daysPresent,
+
+        base_salary: employee.baseSalary,
+        allowance: employee.allowance,
+        attendance_rate: employee.attendanceRate,
+        attendance_amount: employee.attendanceAmount,
+
+        deductions: employee.deductions,
+        total_salary: employee.totalSalary,
+      }))
+
+    // 5. Insert semua detail sekaligus
+    const { error: detailsError } = await supabase
+      .from('payroll_details')
+      .insert(details)
+
+    if (detailsError) throw detailsError
+
+    // 6. Return hasil
+    return {
+      success: true,
+      payrollId: payrollHeader.id,
+      totalProcessed: details.length,
+      message: `Payroll ${month}/${year} processed successfully`,
+    }
+  } catch (error) {
+    console.error('Error processing payroll:', error)
+
+    return {
+      success: false,
+      message: error.message,
+    }
+  }
+}
