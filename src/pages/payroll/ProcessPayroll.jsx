@@ -142,7 +142,7 @@ function ProcessPayroll() {
         })
       }
       setPayrollList(generatedList)
-      alert(`Berhasil menarik ${generatedList.length} rekap gaji baseline komplit!`)
+      alert(`Berhasil menarik ${generatedList.length} rekap file kehadiran komplit!`)
     }
     reader.readAsText(file)
     e.target.value = ''
@@ -233,7 +233,7 @@ function ProcessPayroll() {
       const { error: slipError } = await supabase.from('payroll_slips').insert(slipsWithRunId)
       if (slipError) throw slipError
 
-      alert(`Sukses! Baseline Payroll ${month}/${year} sebesar Rp ${exactTotalAmount.toLocaleString('id-ID')} disimpan permanen. 📄🎉`)
+      alert(`Sukses! Data Payroll Periode ${month}/${year} sebesar Rp ${exactTotalAmount.toLocaleString('id-ID')} disimpan permanen.`)
     } catch (error) {
       alert('Gagal menyimpan: ' + error.message)
     } finally {
@@ -249,10 +249,10 @@ function ProcessPayroll() {
     <div className="p-2">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <div>
-           <h1 className="text-3xl font-bold text-blue-600 mb-4">Process Monthly Payroll</h1>
+           <h1 className="text-3xl font-bold text-black mb-4">Process Monthly Payroll</h1>
            <div className="bg-white p-4 rounded-2xl shadow-sm border border-blue-100 inline-block">
              <p className="text-xs text-gray-400 font-bold tracking-wider">TOTAL PENGELUARAN GAJI (THP)</p>
-             <p className="text-3xl font-black text-blue-700">{formatCurrency(totalTHP)}</p>
+             <p className="text-3xl font-black text-black">{formatCurrency(totalTHP)}</p>
            </div>
         </div>
         
@@ -265,6 +265,10 @@ function ProcessPayroll() {
           <select value={year} onChange={(e) => setYear(parseInt(e.target.value))} className="border p-2 rounded-xl text-sm font-semibold text-gray-700 bg-gray-50">
             <option value={2026}>2026</option>
             <option value={2027}>2027</option>
+            <option value={2028}>2028</option>
+            <option value={2029}>2029</option>
+            <option value={2030}>2030</option>
+            <option value={2031}>2031</option>
           </select>
           <div className="h-6 w-px bg-gray-200 mx-1"></div>
           

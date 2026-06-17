@@ -76,26 +76,26 @@ function PayrollHistory() {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-pulse text-blue-500 font-semibold">Memuat riwayat...</div>
+        <div className="animate-pulse text-gray-500 font-semibold">Memuat riwayat...</div>
       </div>
     )
   }
 
   return (
     <div>
-      <h1 className="text-3xl font-bold text-blue-600 mb-2">Payroll History</h1>
+      <h1 className="text-3xl font-bold text-black">Payroll History</h1>
       <p className="text-gray-500 mb-8 text-sm">Riwayat seluruh payroll yang telah diproses dan diterbitkan.</p>
 
       <div className="bg-white shadow-md rounded-2xl overflow-hidden border border-gray-100">
         <table className="w-full text-left">
-          <thead className="bg-blue-600 text-white text-sm">
+          <thead className="bg-gray-50 text-black-600 text-xs uppercase font-semibold">
             <tr>
-              <th className="px-6 py-4 font-semibold">Periode</th>
-              <th className="px-6 py-4 font-semibold">Waktu Proses</th>
-              <th className="px-6 py-4 font-semibold">Diunggah Oleh</th>
-              <th className="px-6 py-4 font-semibold text-center">Jml Pegawai</th>
-              <th className="px-6 py-4 font-semibold text-right">Total Pengeluaran (THP)</th>
-              <th className="px-6 py-4 font-semibold text-center">Aksi</th>
+              <th className="px-6 py-4 font-semibold">PERIODE</th>
+              <th className="px-6 py-4 font-semibold">WAKTU PROSES</th>
+              <th className="px-6 py-4 font-semibold">DIUNGGAH OLEH</th>
+              <th className="px-6 py-4 font-semibold text-center">JUMLAH PEGAWAI</th>
+              <th className="px-6 py-4 font-semibold text-right">TOTAL PENGELUARAN (THP)</th>
+              <th className="px-6 py-4 font-semibold text-center">AKSI</th>
             </tr>
           </thead>
 

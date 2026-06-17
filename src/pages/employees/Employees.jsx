@@ -9,12 +9,15 @@ function Employees() {
 
   const fileInputRef = useRef(null)
 
+  // 1. TAMBAHKAN BANK_NAME & ACCOUNT_NUMBER DI STATE
   const [form, setForm] = useState({
     nip: '',
     full_name: '',
     hire_date: '',
     position_id: '',
-    category: '', // Tambah state category
+    category: '', 
+    bank_name: '', 
+    account_number: '',
     is_active: true,
   })
 
@@ -63,12 +66,15 @@ function Employees() {
       return
     }
 
+    // 2. MASUKKAN BANK & REKENING SAAT DISIMPAN KE DB
     const employeeData = {
       employee_code: form.nip, 
       full_name: form.full_name,
       hire_date: form.hire_date || null,
       position_id: form.position_id,
-      category: form.category, // Kirim category ke DB
+      category: form.category,
+      bank_name: form.bank_name ? form.bank_name.toUpperCase() : null, // Paksa huruf besar
+      account_number: form.account_number || null,
       is_active: form.is_active,
     }
 
@@ -98,6 +104,8 @@ function Employees() {
       hire_date: '',
       position_id: '',
       category: '',
+      bank_name: '',
+      account_number: '',
       is_active: true,
     })
     setEditingId(null)
@@ -111,20 +119,22 @@ function Employees() {
     }
   }
 
+  // 3. LOAD DATA BANK & REKENING SAAT TOMBOL EDIT DIKLIK
   function handleEdit(emp) {
     setForm({
       nip: emp.employee_code || '',
       full_name: emp.full_name,
       hire_date: emp.hire_date,
       position_id: emp.position_id,
-      category: emp.category || '', // Load category pas edit
+      category: emp.category || '', 
+      bank_name: emp.bank_name || '',
+      account_number: emp.account_number || '',
       is_active: emp.is_active,
     })
     setEditingId(emp.id)
     setShowForm(true)
   }
 
-  // 🚀 FITUR BULK IMPORT CSV (SUDAH MENDUKUNG KOLOM CATEGORY)
   function handleCSVImport(e) {
     const file = e.target.files[0]
     if (!file) return
@@ -143,7 +153,7 @@ function Employees() {
       const nipIndex = headers.findIndex(h => h === 'employee_code' || h === 'nip')
       const nameIndex = headers.findIndex(h => h === 'full_name' || h === 'nama')
       const posIndex = headers.findIndex(h => h === 'position_name' || h === 'jabatan')
-      const catIndex = headers.findIndex(h => h === 'category' || h === 'kategori') // Deteksi kolom category
+      const catIndex = headers.findIndex(h => h === 'category' || h === 'kategori') 
       const dateIndex = headers.findIndex(h => h === 'hire_date' || h === 'tanggal masuk')
 
       if (nipIndex === -1 || nameIndex === -1 || posIndex === -1) {
@@ -175,7 +185,7 @@ function Employees() {
             employee_code: rawNip,
             full_name: rawFullName,
             position_id: matchedPosition.id,
-            category: rawCategory, // Otomatis simpan category dari CSV
+            category: rawCategory,
             hire_date: rawHireDate || null,
             is_active: true,
           })
@@ -218,7 +228,7 @@ function Employees() {
     <div className="p-2">
       {/* HEADER SECTION */}
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-blue-600">Employees Master Data</h1>
+        <h1 className="text-3xl font-bold text-black">Employees Master Data</h1>
         
         <div className="flex gap-2">
           <input 
@@ -288,7 +298,6 @@ function Employees() {
               ))}
             </select>
 
-            {/* ➕ DROPDOWN KATEGORI BARU */}
             <select
               name="category"
               value={form.category}
@@ -300,10 +309,32 @@ function Employees() {
               <option value="Guru Ummi">Guru Ummi</option>
               <option value="Karyawan">Karyawan</option>
             </select>
+
+            {/* 4. INPUTAN BANK DAN NOMOR REKENING DI SINI! */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1 ml-1">Nama Bank</label>
+              <input
+                name="bank_name"
+                value={form.bank_name}
+                onChange={handleChange}
+                placeholder="Contoh: BCA, BNI, BSI"
+                className="border p-2 rounded-xl w-full uppercase"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1 ml-1">Nomor Rekening</label>
+              <input
+                name="account_number"
+                value={form.account_number}
+                onChange={handleChange}
+                placeholder="Contoh: 04501122..."
+                className="border p-2 rounded-xl w-full"
+              />
+            </div>
           </div>
 
-          <div className="flex justify-between items-center pt-2">
-            <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+          <div className="flex justify-between items-center pt-2 mt-4 border-t border-gray-100">
+            <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer pt-3">
               <input
                 type="checkbox"
                 name="is_active"
@@ -314,11 +345,11 @@ function Employees() {
               Status Karyawan Aktif
             </label>
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 pt-3">
               <button 
                 type="button" 
                 onClick={resetForm} 
-                className="bg-gray-200 text-gray-700 px-4 py-2 rounded-xl text-sm font-medium"
+                className="bg-gray-200 text-gray-700 px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-300"
               >
                 Batal
               </button>
